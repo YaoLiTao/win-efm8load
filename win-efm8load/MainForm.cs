@@ -139,6 +139,7 @@ namespace win_efm8load
             ScanCom();
             Print("################################################");
             Print("#                 win-efm8load                 #");
+            Print("#   https://github.com/YaoLiTao/win-efm8load   #");
             Print("################################################");
         }
 
