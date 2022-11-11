@@ -172,6 +172,7 @@
             this.Controls.Add(this.panel);
             this.Location = new System.Drawing.Point(15, 15);
             this.Name = "MainForm";
+            this.Text = "EFM8系列芯片串口下载工具";
             this.panel.ResumeLayout(false);
             this.panel.PerformLayout();
             this.ResumeLayout(false);

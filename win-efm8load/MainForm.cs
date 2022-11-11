@@ -176,7 +176,7 @@ namespace win_efm8load
 
             if (scanComComboBox.Items.Count > 0)
             {
-                scanComComboBox.SelectedIndex = scanComComboBox.Items.Count - 1;
+                scanComComboBox.SelectedIndex = 0;
             }
         }
 
@@ -616,13 +616,24 @@ namespace win_efm8load
 
         private void readMcuButton_Click(object sender, EventArgs e)
         {
+            Print("读取芯片程序功能尚未实现");
         }
 
         private void programButton_Click(object sender, EventArgs e)
         {
-            OpenSerialPort();
-            Upload();
-            CloseSerialPort();
+            try
+            {
+                OpenSerialPort();
+                Upload();
+            }
+            catch (Exception exception)
+            {
+                Print("连接芯片失败...");
+            }
+            finally
+            {
+                CloseSerialPort();
+            }
         }
     }
 }
