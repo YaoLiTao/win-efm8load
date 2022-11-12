@@ -60,7 +60,7 @@
             this.infoTextBox.Location = new System.Drawing.Point(266, 6);
             this.infoTextBox.Multiline = true;
             this.infoTextBox.Name = "infoTextBox";
-            this.infoTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.infoTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.infoTextBox.Size = new System.Drawing.Size(449, 303);
             this.infoTextBox.TabIndex = 0;
             this.infoTextBox.WordWrap = false;
@@ -189,7 +189,6 @@
             this.panel.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
 
