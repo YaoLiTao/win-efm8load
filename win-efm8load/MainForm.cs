@@ -40,7 +40,6 @@ namespace win_efm8load
         private int flashSize;
         private int flashPageSize;
         private int flashSecurityPageSize;
-        private int totalStep;
 
         /**
          * 初始化芯片列表
