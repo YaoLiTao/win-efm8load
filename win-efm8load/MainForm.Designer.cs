@@ -31,6 +31,7 @@
             this.openFileButton = new System.Windows.Forms.Button();
             this.infoTextBox = new System.Windows.Forms.TextBox();
             this.panel = new System.Windows.Forms.Panel();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
             this.resetMucButton = new System.Windows.Forms.Button();
             this.baudRatelabel = new System.Windows.Forms.Label();
             this.scanComComboBox = new System.Windows.Forms.ComboBox();
@@ -66,6 +67,7 @@
             // 
             // panel
             // 
+            this.panel.Controls.Add(this.progressBar);
             this.panel.Controls.Add(this.resetMucButton);
             this.panel.Controls.Add(this.baudRatelabel);
             this.panel.Controls.Add(this.scanComComboBox);
@@ -79,6 +81,15 @@
             this.panel.Name = "panel";
             this.panel.Size = new System.Drawing.Size(253, 303);
             this.panel.TabIndex = 2;
+            // 
+            // progressBar
+            // 
+            this.progressBar.ForeColor = System.Drawing.SystemColors.GradientInactiveCaption;
+            this.progressBar.Location = new System.Drawing.Point(5, 276);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(240, 17);
+            this.progressBar.Step = 1;
+            this.progressBar.TabIndex = 12;
             // 
             // resetMucButton
             // 
@@ -136,7 +147,7 @@
             // programButton
             // 
             this.programButton.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.programButton.Location = new System.Drawing.Point(76, 225);
+            this.programButton.Location = new System.Drawing.Point(76, 215);
             this.programButton.Name = "programButton";
             this.programButton.Size = new System.Drawing.Size(96, 38);
             this.programButton.TabIndex = 8;
@@ -178,6 +189,7 @@
             this.panel.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
 
 
@@ -194,6 +206,7 @@
         private System.Windows.Forms.ComboBox scanComComboBox;
         private System.Windows.Forms.ComboBox baudRateComboBox;
         private System.Windows.Forms.Button scanComButton;
+        private System.Windows.Forms.ProgressBar progressBar;
     }
 }
 
