@@ -183,10 +183,13 @@ namespace win_efm8load
             Print(format + "\r\n", args);
         }
 
+        /**
+         * 打印文本（不换行），将文本刷新到底部
+         */
         private void Print(string format, params object[] args)
         {
             infoTextBox.AppendText(string.Format(format, args));
-            RefreshInfoTextBox();
+            infoTextBox.ScrollToCaret();
         }
 
         /**
@@ -271,15 +274,6 @@ namespace win_efm8load
             serial?.Close();
             Println("关闭串口[{0}]", serial?.PortName);
             Println("");
-        }
-
-        /**
-         * 将文本框刷新到最下面
-         */
-        private void RefreshInfoTextBox()
-        {
-            infoTextBox.SelectionStart = infoTextBox.TextLength;
-            infoTextBox.ScrollToCaret();
         }
 
         /**
