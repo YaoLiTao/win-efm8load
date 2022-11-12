@@ -94,7 +94,7 @@
             // resetMucButton
             // 
             this.resetMucButton.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.resetMucButton.Location = new System.Drawing.Point(148, 165);
+            this.resetMucButton.Location = new System.Drawing.Point(5, 165);
             this.resetMucButton.Name = "resetMucButton";
             this.resetMucButton.Size = new System.Drawing.Size(97, 29);
             this.resetMucButton.TabIndex = 11;
@@ -166,7 +166,7 @@
             // scanMcuButton
             // 
             this.scanMcuButton.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.scanMcuButton.Location = new System.Drawing.Point(5, 165);
+            this.scanMcuButton.Location = new System.Drawing.Point(148, 165);
             this.scanMcuButton.Name = "scanMcuButton";
             this.scanMcuButton.Size = new System.Drawing.Size(97, 29);
             this.scanMcuButton.TabIndex = 5;

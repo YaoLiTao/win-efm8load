@@ -258,7 +258,8 @@ namespace win_efm8load
             }
             catch (Exception)
             {
-                Println("打开串口[{0}]失败", serial.PortName);
+                Println("打开串口[{0}] - 失败", serial.PortName);
+                throw;
             }
         }
 
@@ -354,7 +355,7 @@ namespace win_efm8load
             // write all data bytes
             WritePagesIh(hexRecords);
             progressBar.Value += 1;
-            
+
             // Verify all page
             VerifyPagesIh(hexRecords);
         }
@@ -485,6 +486,7 @@ namespace win_efm8load
                     Println("FAILURE");
                     throw new DataException();
                 }
+
                 progressBar.Value += 1;
             }
 
@@ -591,6 +593,7 @@ namespace win_efm8load
                     Println("FAILURE !");
                     throw new DataException();
                 }
+
                 progressBar.Value += 1;
             }
         }
