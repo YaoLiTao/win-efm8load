@@ -31,7 +31,7 @@
             this.openFileButton = new System.Windows.Forms.Button();
             this.infoTextBox = new System.Windows.Forms.TextBox();
             this.panel = new System.Windows.Forms.Panel();
-            this.readMcuButton = new System.Windows.Forms.Button();
+            this.resetMucButton = new System.Windows.Forms.Button();
             this.baudRatelabel = new System.Windows.Forms.Label();
             this.scanComComboBox = new System.Windows.Forms.ComboBox();
             this.baudRateComboBox = new System.Windows.Forms.ComboBox();
@@ -62,10 +62,11 @@
             this.infoTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.infoTextBox.Size = new System.Drawing.Size(449, 303);
             this.infoTextBox.TabIndex = 0;
+            this.infoTextBox.WordWrap = false;
             // 
             // panel
             // 
-            this.panel.Controls.Add(this.readMcuButton);
+            this.panel.Controls.Add(this.resetMucButton);
             this.panel.Controls.Add(this.baudRatelabel);
             this.panel.Controls.Add(this.scanComComboBox);
             this.panel.Controls.Add(this.baudRateComboBox);
@@ -79,16 +80,16 @@
             this.panel.Size = new System.Drawing.Size(253, 303);
             this.panel.TabIndex = 2;
             // 
-            // readMcuButton
+            // resetMucButton
             // 
-            this.readMcuButton.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.readMcuButton.Location = new System.Drawing.Point(148, 165);
-            this.readMcuButton.Name = "readMcuButton";
-            this.readMcuButton.Size = new System.Drawing.Size(97, 29);
-            this.readMcuButton.TabIndex = 11;
-            this.readMcuButton.Text = "读取芯片芯片";
-            this.readMcuButton.UseVisualStyleBackColor = true;
-            this.readMcuButton.Click += new System.EventHandler(this.readMcuButton_Click);
+            this.resetMucButton.Font = new System.Drawing.Font("微软雅黑", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.resetMucButton.Location = new System.Drawing.Point(148, 165);
+            this.resetMucButton.Name = "resetMucButton";
+            this.resetMucButton.Size = new System.Drawing.Size(97, 29);
+            this.resetMucButton.TabIndex = 11;
+            this.resetMucButton.Text = "重启芯片";
+            this.resetMucButton.UseVisualStyleBackColor = true;
+            this.resetMucButton.Click += new System.EventHandler(this.resetMcuButton_Click);
             // 
             // baudRatelabel
             // 
@@ -188,7 +189,7 @@
         private System.Windows.Forms.Panel panel;
         private System.Windows.Forms.Button programButton;
         private System.Windows.Forms.TextBox openFileTextBox;
-        private System.Windows.Forms.Button readMcuButton;
+        private System.Windows.Forms.Button resetMucButton;
         private System.Windows.Forms.Button scanMcuButton;
         private System.Windows.Forms.ComboBox scanComComboBox;
         private System.Windows.Forms.ComboBox baudRateComboBox;

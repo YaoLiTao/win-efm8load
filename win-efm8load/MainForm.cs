@@ -1,10 +1,26 @@
-﻿using System;
+﻿//
+// This file is part of efm8load. efm8load is free software: you can
+// redistribute it and/or modify it under the terms of the GNU General Public
+// License as published by the Free Software Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+// details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program; if not, write to the Free Software Foundation, Inc., 51
+// Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+// Copyright 2020 fishpepper.de
+//
+
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
-using System.Security.Policy;
 using System.Windows.Forms;
 using Algorithm.Check;
 using IntelHexFormatReader;
@@ -137,10 +153,29 @@ namespace win_efm8load
             InitializeComponent();
             InitBaudRate();
             ScanCom();
-            Print("################################################");
-            Print("#                 win-efm8load                 #");
-            Print("#   https://github.com/YaoLiTao/win-efm8load   #");
-            Print("################################################");
+            Print("##################################################");
+            Print("#                  win-efm8load                  #");
+            Print("#    https://github.com/YaoLiTao/win-efm8load    #");
+            Print("# @Thanks https://github.com/fishpepper/efm8load #");
+            Print("##################################################");
+            Print("");
+        }
+
+        private string ResponseToStr(int res)
+        {
+            switch (res)
+            {
+                case (int)RESPONSE.ACK:
+                    return RESPONSE.ACK.ToString();
+                case (int)RESPONSE.RANGE_ERROR:
+                    return RESPONSE.RANGE_ERROR.ToString();
+                case (int)RESPONSE.BAD_ID:
+                    return RESPONSE.BAD_ID.ToString();
+                case (int)RESPONSE.CRC_ERROR:
+                    return RESPONSE.CRC_ERROR.ToString();
+            }
+
+            return "unknown response";
         }
 
         private void Print(string format, params object[] args)
@@ -193,6 +228,9 @@ namespace win_efm8load
             baudRateComboBox.SelectedIndex = 2;
         }
 
+        /**
+         * 打开串口
+         */
         private void OpenSerialPort()
         {
             try
@@ -215,16 +253,20 @@ namespace win_efm8load
                 serial.Open();
                 Print("打开串口[{0}]成功", serial.PortName);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                Print("打开串口[{0}]失败: {1}", serial.PortName, e);
+                Print("打开串口[{0}]失败", serial.PortName);
             }
         }
 
+        /**
+         * 关闭串口
+         */
         private void CloseSerialPort()
         {
             serial?.Close();
             Print("关闭串口[{0}]成功", serial?.PortName);
+            Print("");
         }
 
         /**
@@ -237,6 +279,38 @@ namespace win_efm8load
         }
 
         /**
+         * 选择HEX文件
+         */
+        private void SelectHexFile()
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Multiselect = false;
+            dialog.Title = "请选择程序HEX文件";
+            dialog.Filter = "*.hex|*.HEX";
+            if (dialog.ShowDialog() != DialogResult.OK) return;
+            openFileTextBox.Text = dialog.FileName;
+            Print("文件选择成功: {0}", openFileTextBox.Text);
+        }
+
+        /**
+         * TODO 保存HEX文件
+         */
+        private string SaveHexFile()
+        {
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.Title = "请保存程序HEX文件";
+            dialog.Filter = "*.hex|*.HEX";
+            if (dialog.ShowDialog() != DialogResult.OK) return null;
+            infoTextBox.Text += "文件选择成功：" + openFileTextBox.Text + "\r\n";
+            Print("正在读取芯片HEX到: {0}", dialog.FileName);
+            return dialog.FileName;
+        }
+
+
+        /**************************** 串口下载函数 ****************************/
+
+
+        /**
          * 下载程序到芯片
          */
         private void Upload()
@@ -244,7 +318,7 @@ namespace win_efm8load
             Print("> uploading file '{0}'", openFileTextBox.Text);
             if (string.IsNullOrEmpty(openFileTextBox.Text))
             {
-                Print("> 未选择程序文件，请先选择需要下载的程序文件！");
+                Print("> 未选择程序文件，请先选择需要下载的程序文件");
                 return;
             }
 
@@ -265,218 +339,7 @@ namespace win_efm8load
 
             // write all data bytes
             WritePagesIh(hexRecords);
-            VerifyPVerifyPagesIh(hexRecords);
-        }
-
-        private void WritePagesIh(List<IntelHexRecord> hexRecords)
-        {
-            // write all segments from this ihex to flash
-            //
-            // NOTE:
-            // it is important to keep flash location 0
-            // equal to 0xFF until we are almost finished...
-            // therefore the bootloader will still be functional in case
-            // something goes wrong in the process.
-            // (the bootloader will be executed as long the first flash
-            // content equals 0xFF)
-
-            var byteZero = -1;
-            foreach (var hexRecord in hexRecords)
-            {
-                var start = hexRecord.Address;
-                var end = hexRecord.Address + hexRecord.ByteCount;
-                Print("> writing segment 0x{0:X4}-0x{1:X4}", start, end - 1);
-
-                // fetch data
-                var data = new List<byte>(hexRecord.Bytes);
-
-                // write in 128byte blobs
-                var dataPos = 0;
-
-                // keep byte zero 0xFF in order to keep bootloader active (for now)
-                if (start == 0)
-                {
-                    Print("> delaying write of flash[0] = 0x{0:X2} to the end", data[0]);
-                    byteZero = data[0];
-                    start = start + 1;
-                    data.RemoveAt(0);
-                }
-
-                while ((dataPos + start) < end)
-                {
-                    var length = Math.Min(128, end - (dataPos + start));
-                    Write(start + dataPos, data.GetRange(dataPos, dataPos + length).ToArray());
-                    dataPos += length;
-                }
-
-                // now verify this segment
-                Print("> verifying segment... ");
-
-                if (Verify(start, data.ToArray()) == (int)RESPONSE.ACK)
-                {
-                    Print("OK");
-                }
-                else
-                {
-                    Print("FAILURE !");
-                    throw new DataException();
-                }
-            }
-
-            // all bytes except byte zero were written, do this now
-            if (byteZero != -1)
-            {
-                Print("> will now write flash[0] = 0x{0:X2}", byteZero);
-                var res = Write(0, new[] { (byte)byteZero });
-                if (res != (int)RESPONSE.ACK)
-                {
-                    Print("> ERROR, write of flash[0] failed (response = {0})", res);
-                    RestoreBootloaderAutostart();
-                    throw new DataException();
-                }
-
-                res = Verify(0, new[] { (byte)byteZero });
-                if (res != (int)RESPONSE.ACK)
-                {
-                    Print("> ERROR, write of flash[0] failed (response = {0})", res);
-                    RestoreBootloaderAutostart();
-                    throw new DataException();
-                }
-            }
-        }
-
-        private void RestoreBootloaderAutostart()
-        {
-            // the bootloader will always start if flash[0] = 0xFF
-            // in case something went wrong during programming,
-            // call this in order to clear page 0 so that the bootloader
-            // will always start
-            Print("> will now erase page 0 in order to re-enable bootloader autorun");
-            ErasePage(0);
-        }
-
-        private int Write(int address, byte[] data)
-        {
-            if (data.Length > 128)
-            {
-                Print("ERROR: invalid chunksize, maximum allowed write is 128 bytes ({})", data.Length);
-                throw new DataException();
-            }
-
-            // send request
-            var addressHi = (address >> 8) & 0xFF;
-            var addressLo = address & 0xFF;
-            var bytes = new[] { (byte)addressHi, (byte)addressLo }.ToList();
-            bytes.AddRange(data);
-            var res = Send(COMMAND.WRITE, bytes.ToArray());
-            if (res != (int)RESPONSE.ACK) return res;
-            Print("ERROR: write failed at address 0x{0:X3} (response = {1})", address, res);
-            throw new DataException();
-        }
-
-        private int Verify(int address, byte[] data)
-        {
-            var length = data.Length;
-            var crc16 = ExtensionForCRC16.CRC16(data, ExtensionForCRC16.CRC16Type.CCITTxModem);
-            if (debug) Print("> verify address 0x{0:X4} (len={1}, crc16=0x{0:X4})", address, length, crc16);
-            var startHi = (address >> 8) & 0xFF;
-            var startLo = address & 0xFF;
-            var end = address + length - 1;
-            var endHi = (end >> 8) & 0xFF;
-            var endLo = end & 0xFF;
-            var crcHi = (crc16 >> 8) & 0xFF;
-            var crcLo = crc16 & 0xFF;
-            return Send(COMMAND.VERIFY,
-                new[] { (byte)startHi, (byte)startLo, (byte)endHi, (byte)endLo, (byte)crcHi, (byte)crcLo });
-        }
-
-        private void VerifyPVerifyPagesIh(List<IntelHexRecord> hexRecords)
-        {
-            // verify written data
-            //
-            // do a pagewise compare to find the position of
-            // the mismatch
-
-            foreach (var hexRecord in hexRecords)
-            {
-                var start = hexRecord.Address;
-                var end = hexRecord.Address + hexRecord.ByteCount;
-                Print("> verifying segment 0x{0:X4}-0x{0:X4}... ", start, end - 1);
-
-                // calc crc16
-                if (Verify(start, hexRecord.Bytes) == (int)RESPONSE.ACK)
-                {
-                    Print("OK");
-                }
-                else
-                {
-                    Print("FAILURE !");
-                    throw new DataException();
-                }
-            }
-        }
-
-        private void ErasePagesIh(List<IntelHexRecord> hexRecords)
-        {
-            // erase all pages that are occupied
-            var lastAddress = hexRecords[-1].Address;
-            var lastPage = (lastAddress / flashPageSize);
-            for (var page = 0; page < lastPage + 1; page++)
-            {
-                var start = page * flashPageSize;
-                var end = start + flashPageSize - 1;
-                var pageUsed = false;
-                foreach (var hexRecord in hexRecords)
-                {
-                    if (hexRecord.Address >= start && hexRecord.Address <= end)
-                    {
-                        pageUsed = true;
-                        break;
-                    }
-                }
-
-                // always erase page 0 to retain bootloader access
-                if (page == 0 || pageUsed)
-                {
-                    ErasePage(page);
-                }
-            }
-        }
-
-        private int ErasePage(int page)
-        {
-            var start = page * flashPageSize;
-            var end = start + flashPageSize - 1;
-            var startHi = (start >> 8) & 0xFF;
-            var startLo = start & 0xFF;
-            Print("> will erase page {0} (0x{1:X4}-0x{2:X4})", page, start, end);
-            return Send(COMMAND.ERASE, new[] { (byte)startHi, (byte)startLo });
-        }
-
-        private List<IntelHexRecord> LoadHex(string fileName)
-        {
-            var hexRecords = new List<IntelHexRecord>();
-            foreach (var line in File.ReadLines(fileName))
-            {
-                var hexRecord = HexFileLineParser.ParseLine(line);
-                hexRecords.Add(hexRecord);
-            }
-
-            return hexRecords;
-        }
-
-        /**
-         * 选择文件
-         */
-        private void SelectHexFile()
-        {
-            OpenFileDialog dialog = new OpenFileDialog();
-            dialog.Multiselect = false;
-            dialog.Title = "请选择程序HEX文件";
-            dialog.Filter = "*.hex|*.HEX";
-            if (dialog.ShowDialog() != DialogResult.OK) return;
-            openFileTextBox.Text = dialog.FileName;
-            infoTextBox.Text += "文件选择成功：" + openFileTextBox.Text + "\r\n";
+            VerifyPagesIh(hexRecords);
         }
 
         /**
@@ -528,6 +391,246 @@ namespace win_efm8load
         }
 
         /**
+         * 重启芯片
+         */
+        private void SendReset()
+        {
+            Print("> send reset command");
+            if (Send(COMMAND.RESET, new[] { (byte)255, (byte)255 }) == (int)RESPONSE.ACK)
+            {
+                Print("> success, device restarted...");
+            }
+        }
+
+        /**
+         * TODO 将芯片中的HEX导出到文件
+         */
+        private void Download()
+        {
+        }
+
+        /**
+         * 将HEX文件的页写入Flash
+         */
+        private void WritePagesIh(List<IntelHexRecord> hexRecords)
+        {
+            // write all segments from this ihex to flash
+            //
+            // NOTE:
+            // it is important to keep flash location 0
+            // equal to 0xFF until we are almost finished...
+            // therefore the bootloader will still be functional in case
+            // something goes wrong in the process.
+            // (the bootloader will be executed as long the first flash
+            // content equals 0xFF)
+
+            var byteZero = -1;
+            foreach (var hexRecord in hexRecords)
+            {
+                var start = hexRecord.Address;
+                var end = hexRecord.Address + hexRecord.ByteCount;
+                Print("> writing segment 0x{0:X4}-0x{1:X4}", start, end - 1);
+
+                // fetch data
+                var data = new List<byte>(hexRecord.Bytes);
+
+                // write in 128byte blobs
+                var dataPos = 0;
+
+                // keep byte zero 0xFF in order to keep bootloader active (for now)
+                if (start == 0)
+                {
+                    Print("> delaying write of flash[0] = 0x{0:X2} to the end", data[0]);
+                    byteZero = data[0];
+                    start = start + 1;
+                    data.RemoveAt(0);
+                }
+
+                while ((dataPos + start) < end)
+                {
+                    var length = Math.Min(128, end - (dataPos + start));
+                    Write(start + dataPos, data.GetRange(dataPos, dataPos + length).ToArray());
+                    dataPos += length;
+                }
+
+                // now verify this segment
+                Print("> verifying segment... ");
+
+                if (Verify(start, data.ToArray()) == (int)RESPONSE.ACK)
+                {
+                    Print("OK");
+                }
+                else
+                {
+                    Print("FAILURE");
+                    throw new DataException();
+                }
+            }
+
+            // all bytes except byte zero were written, do this now
+            if (byteZero != -1)
+            {
+                Print("> will now write flash[0] = 0x{0:X2}", byteZero);
+                var res = Write(0, new[] { (byte)byteZero });
+                if (res != (int)RESPONSE.ACK)
+                {
+                    Print("> ERROR, write of flash[0] failed (response = {0} {1})", res, ResponseToStr(res));
+                    RestoreBootloaderAutostart();
+                    throw new DataException();
+                }
+
+                res = Verify(0, new[] { (byte)byteZero });
+                if (res != (int)RESPONSE.ACK)
+                {
+                    Print("> ERROR, write of flash[0] failed (response = {0} {1})", res, ResponseToStr(res));
+                    RestoreBootloaderAutostart();
+                    throw new DataException();
+                }
+            }
+        }
+
+        /**
+         * 将页0擦除，下次芯片重启时自动进入串口下载模式
+         */
+        private void RestoreBootloaderAutostart()
+        {
+            // the bootloader will always start if flash[0] = 0xFF
+            // in case something went wrong during programming,
+            // call this in order to clear page 0 so that the bootloader
+            // will always start
+            Print("> will now erase page 0 in order to re-enable bootloader autorun");
+            ErasePage(0);
+        }
+
+        /**
+         * 向指定地址写入数据
+         */
+        private int Write(int address, byte[] data)
+        {
+            if (data.Length > 128)
+            {
+                Print("> ERROR: invalid chunksize, maximum allowed write is 128 bytes ({0})", data.Length);
+                throw new DataException();
+            }
+
+            // send request
+            var addressHi = (address >> 8) & 0xFF;
+            var addressLo = address & 0xFF;
+            var bytes = new[] { (byte)addressHi, (byte)addressLo }.ToList();
+            bytes.AddRange(data);
+            var res = Send(COMMAND.WRITE, bytes.ToArray());
+            if (res == (int)RESPONSE.ACK) return res;
+            Print("> ERROR: write failed at address 0x{0:X4} (response = {1} {2})", address, res, ResponseToStr(res));
+            throw new DataException();
+        }
+
+        /**
+         * CRC16校验指定地址的数据
+         */
+        private int Verify(int address, byte[] data)
+        {
+            var length = data.Length;
+            var crc16 = ExtensionForCRC16.CRC16(data, ExtensionForCRC16.CRC16Type.CCITTxModem);
+            if (debug) Print("> verify address 0x{0:X4} (len={1}, crc16=0x{0:X4})", address, length, crc16);
+            var startHi = (address >> 8) & 0xFF;
+            var startLo = address & 0xFF;
+            var end = address + length - 1;
+            var endHi = (end >> 8) & 0xFF;
+            var endLo = end & 0xFF;
+            var crcHi = (crc16 >> 8) & 0xFF;
+            var crcLo = crc16 & 0xFF;
+            return Send(COMMAND.VERIFY,
+                new[] { (byte)startHi, (byte)startLo, (byte)endHi, (byte)endLo, (byte)crcHi, (byte)crcLo });
+        }
+
+        /**
+         * CRC校验HEX文件与已写入Flash的页
+         */
+        private void VerifyPagesIh(List<IntelHexRecord> hexRecords)
+        {
+            // verify written data
+            //
+            // do a pagewise compare to find the position of
+            // the mismatch
+
+            foreach (var hexRecord in hexRecords)
+            {
+                var start = hexRecord.Address;
+                var end = hexRecord.Address + hexRecord.ByteCount;
+                Print("> verifying segment 0x{0:X4}-0x{0:X4}... ", start, end - 1);
+
+                // calc crc16
+                if (Verify(start, hexRecord.Bytes) == (int)RESPONSE.ACK)
+                {
+                    Print("OK");
+                }
+                else
+                {
+                    Print("FAILURE !");
+                    throw new DataException();
+                }
+            }
+        }
+
+        /**
+         * 擦除HEX中需要的写入页
+         */
+        private void ErasePagesIh(List<IntelHexRecord> hexRecords)
+        {
+            // erase all pages that are occupied
+            var lastAddress = hexRecords[-1].Address;
+            var lastPage = (lastAddress / flashPageSize);
+            for (var page = 0; page < lastPage + 1; page++)
+            {
+                var start = page * flashPageSize;
+                var end = start + flashPageSize - 1;
+                var pageUsed = false;
+                foreach (var hexRecord in hexRecords)
+                {
+                    if (hexRecord.Address >= start && hexRecord.Address <= end)
+                    {
+                        pageUsed = true;
+                        break;
+                    }
+                }
+
+                // always erase page 0 to retain bootloader access
+                if (page == 0 || pageUsed)
+                {
+                    ErasePage(page);
+                }
+            }
+        }
+
+        /**
+         * 擦除整页
+         */
+        private int ErasePage(int page)
+        {
+            var start = page * flashPageSize;
+            var end = start + flashPageSize - 1;
+            var startHi = (start >> 8) & 0xFF;
+            var startLo = start & 0xFF;
+            Print("> will erase page {0} (0x{1:X4}-0x{2:X4})", page, start, end);
+            return Send(COMMAND.ERASE, new[] { (byte)startHi, (byte)startLo });
+        }
+
+        /**
+         * 解析HEX
+         */
+        private List<IntelHexRecord> LoadHex(string fileName)
+        {
+            var hexRecords = new List<IntelHexRecord>();
+            foreach (var line in File.ReadLines(fileName))
+            {
+                var hexRecord = HexFileLineParser.ParseLine(line);
+                hexRecords.Add(hexRecord);
+            }
+
+            return hexRecords;
+        }
+
+        /**
          * 训练波特率
          */
         private void SendAutoBaudTraining()
@@ -539,27 +642,36 @@ namespace win_efm8load
             }
         }
 
+        /**
+         * 发送一个字节
+         */
         private void SendByte(byte b)
         {
             try
             {
                 serial.Write(new[] { b }, 0, 1);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                Print("ERROR: failed to send byte to serial port");
+                Print("错误: 串口写入失败");
                 throw;
             }
         }
 
+        /**
+         * 使能Flash访问
+         */
         private void EnableFlashAccess()
         {
             var res = Send(COMMAND.SETUP, new byte[] { 0xA5, 0xF1, 0x00 });
             if (res == (int)RESPONSE.ACK) return;
-            Print("> ERROR enabling flash access, error code 0x{0:X2}", res);
+            Print("> ERROR enabling flash access, error code 0x{0:X2} {1}", res, ResponseToStr(res));
             throw new DataException();
         }
 
+        /**
+         * 发送带命令的字节数组
+         */
         private int Send(COMMAND cmd, byte[] data)
         {
             Print("> send command: {0}", cmd);
@@ -586,17 +698,23 @@ namespace win_efm8load
             }
             catch (Exception e)
             {
-                Print("ERROR: failed to send data: {0}", e);
-                throw;
+                Print("> ERROR: failed to send data [{0}]", e.Message);
             }
+
+            return -1;
         }
 
+        /**
+         * 判定芯片ID
+         */
         private bool CheckId(byte deviceId, byte variantId)
         {
             return Send(COMMAND.IDENTIFY, new[] { deviceId, variantId }) == (int)RESPONSE.ACK;
         }
 
+
         /**************************** 点击事件 ****************************/
+
 
         private void scanComButton_Click(object sender, EventArgs e)
         {
@@ -610,26 +728,54 @@ namespace win_efm8load
 
         private void scanMcuButton_Click(object sender, EventArgs e)
         {
-            OpenSerialPort();
-            IdentifyChip();
-            CloseSerialPort();
+            try
+            {
+                Print("");
+                Print("扫描芯片开始...");
+                OpenSerialPort();
+                IdentifyChip();
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+            finally
+            {
+                CloseSerialPort();
+            }
         }
 
-        private void readMcuButton_Click(object sender, EventArgs e)
+        private void resetMcuButton_Click(object sender, EventArgs e)
         {
-            Print("读取芯片程序功能尚未实现");
+            try
+            {
+                Print("");
+                Print("重启芯片开始...");
+                OpenSerialPort();
+                SendReset();
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+            finally
+            {
+                CloseSerialPort();
+            }
         }
 
         private void programButton_Click(object sender, EventArgs e)
         {
             try
             {
+                Print("");
+                Print("下载/编程开始...");
                 OpenSerialPort();
                 Upload();
             }
-            catch (Exception exception)
+            catch (Exception)
             {
-                Print("连接芯片失败...");
+                // ignored
             }
             finally
             {
