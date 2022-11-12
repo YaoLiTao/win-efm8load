@@ -327,12 +327,12 @@ namespace win_efm8load
                 return;
             }
 
-            // identify chip
-            IdentifyChip();
-
             // read hex file
             var hexRecords = LoadHex(openFileTextBox.Text);
-            SetProgressBar(0, hexRecords.Count * 2);
+            SetProgressBar(0, hexRecords.Count * 2 + 3);
+
+            // identify chip
+            IdentifyChip();
 
             // send autoBaud training character
             SendAutoBaudTraining();
@@ -348,7 +348,6 @@ namespace win_efm8load
 
             // write all data bytes
             WritePagesIh(hexRecords);
-            progressBar.Value += 1;
 
             // Verify all page
             VerifyPagesIh(hexRecords);
@@ -462,7 +461,7 @@ namespace win_efm8load
                 while ((dataPos + start) < end)
                 {
                     var length = Math.Min(128, end - (dataPos + start));
-                    Write(start + dataPos, data.GetRange(dataPos, dataPos + length).ToArray());
+                    Write(start + dataPos, data.GetRange(dataPos, length).ToArray());
                     dataPos += length;
                 }
 
@@ -532,12 +531,12 @@ namespace win_efm8load
             if (data.Length > 8)
             {
                 dataExcerpt = data.Take(4)
-                                   .Select(x => $"0x{x:X2}")
-                                   .Aggregate((a, b) => $"{a} {b}")
-                               + " ... "
-                               + data.Skip(data.Length - 4).Take(4)
-                                   .Select(x => $"0x{x:X2}")
-                                   .Aggregate((a, b) => $"{a} {b}");
+                                  .Select(x => $"0x{x:X2}")
+                                  .Aggregate((a, b) => $"{a} {b}")
+                              + " ... "
+                              + data.Skip(data.Length - 4).Take(4)
+                                  .Select(x => $"0x{x:X2}")
+                                  .Aggregate((a, b) => $"{a} {b}");
             }
             else
             {
@@ -708,26 +707,7 @@ namespace win_efm8load
                 }
             }
 
-            // 拆分，每段最大128字节
-            var max128ByteHexRecords = new List<IntelHexRecord>();
-            foreach (var hexRecord in segmentHexRecords)
-            {
-                var page = hexRecord.ByteCount / 128 + (hexRecord.ByteCount % 128 == 0 ? 0 : 1);
-                for (var i = 0; i < page; i++)
-                {
-                    max128ByteHexRecords.Add(new IntelHexRecord
-                    {
-                        Address = hexRecord.Address + i * 128,
-                        ByteCount = i == page - 1 ? hexRecord.ByteCount % 128 : 128,
-                        Bytes = hexRecord.Bytes
-                            .Skip(i * 128)
-                            .Take(i == page - 1 ? hexRecord.ByteCount % 128 : 128)
-                            .ToArray(),
-                    });
-                }
-            }
-
-            return max128ByteHexRecords;
+            return segmentHexRecords;
         }
 
         /**
@@ -877,7 +857,7 @@ namespace win_efm8load
             }
             catch (Exception exception)
             {
-                if (debug) Println("{0}", exception.Message);
+                if (debug) Println("{0}", exception);
             }
             finally
             {
