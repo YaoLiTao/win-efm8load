@@ -440,8 +440,6 @@ namespace win_efm8load
             var byteZero = -1;
             foreach (var hexRecord in hexRecords)
             {
-                // 跳过非数据部分
-                if (hexRecord.RecordType != RecordType.Data) continue;
                 var start = hexRecord.Address;
                 var end = hexRecord.Address + hexRecord.ByteCount;
                 Println("> writing segment 0x{0:X4}-0x{1:X4}", start, end - 1);
@@ -530,6 +528,25 @@ namespace win_efm8load
                 throw new DataException();
             }
 
+            string dataExcerpt;
+            if (data.Length > 8)
+            {
+                dataExcerpt = data.Take(4)
+                                   .Select(x => $"0x{x:X2}")
+                                   .Aggregate((a, b) => $"{a} {b}")
+                               + " ... "
+                               + data.Skip(data.Length - 4).Take(4)
+                                   .Select(x => $"0x{x:X2}")
+                                   .Aggregate((a, b) => $"{a} {b}");
+            }
+            else
+            {
+                dataExcerpt = data.Select(x => $"0x{x:X2}").Aggregate((a, b) => $"{a} {b}");
+            }
+
+            Println("> write at 0x{0:X4} ({1:D3}): {2}", address, data.Length, dataExcerpt);
+
+
             // send request
             var addressHi = (address >> 8) & 0xFF;
             var addressLo = address & 0xFF;
@@ -571,8 +588,6 @@ namespace win_efm8load
             // the mismatch
             foreach (var hexRecord in hexRecords)
             {
-                // 跳过非数据部分
-                if (hexRecord.RecordType != RecordType.Data) continue;
                 var start = hexRecord.Address;
                 var end = hexRecord.Address + hexRecord.ByteCount;
                 Print("> verifying segment 0x{0:X4}-0x{1:X4}... ", start, end - 1);
@@ -641,13 +656,78 @@ namespace win_efm8load
         private List<IntelHexRecord> LoadHex(string fileName)
         {
             var hexRecords = new List<IntelHexRecord>();
-            foreach (var line in File.ReadLines(fileName))
+            var baseAddress = 0;
+            foreach (var hexRecordLine in File.ReadLines(fileName))
             {
-                var hexRecord = HexFileLineParser.ParseLine(line);
-                hexRecords.Add(hexRecord);
+                var line = HexFileLineParser.ParseLine(hexRecordLine);
+                switch (line.RecordType)
+                {
+                    case RecordType.Data:
+                        var absoluteAddress = line.Address + baseAddress;
+                        line.Address = absoluteAddress;
+                        hexRecords.Add(line);
+                        continue;
+                    case RecordType.ExtendedSegmentAddress:
+                        line.Assert(rec => rec.ByteCount == 2, "Byte count should be 2.");
+                        baseAddress = (line.Bytes[0] << 8 | line.Bytes[1]) << 4;
+                        continue;
+                    case RecordType.ExtendedLinearAddress:
+                        line.Assert(rec => rec.ByteCount == 2, "Byte count should be 2.");
+                        baseAddress = (line.Bytes[0] << 8 | line.Bytes[1]) << 16;
+                        continue;
+                    case RecordType.EndOfFile:
+                        line.Assert(rec => rec.Address == 0, "Address should equal zero in EOF.");
+                        line.Assert(rec => rec.ByteCount == 0, "Byte count should be zero in EOF.");
+                        line.Assert(rec => rec.Bytes.Length == 0, "Number of bytes should be zero for EOF.");
+                        line.Assert(rec => rec.CheckSum == byte.MaxValue, "Checksum should be 0xff for EOF.");
+                        continue;
+                    default:
+                        continue;
+                }
             }
 
-            return hexRecords;
+            // 连续地址归并到一起（合成一段）
+            IntelHexRecord segmentHexRecord = null;
+            var segmentHexRecords = new List<IntelHexRecord>();
+            foreach (var hexRecord in hexRecords)
+            {
+                if (segmentHexRecord == null ||
+                    hexRecord.Address != segmentHexRecord.Address + segmentHexRecord.ByteCount)
+                {
+                    segmentHexRecords.Add(segmentHexRecord = new IntelHexRecord
+                    {
+                        Address = hexRecord.Address,
+                        Bytes = hexRecord.Bytes,
+                        ByteCount = hexRecord.ByteCount
+                    });
+                }
+                else
+                {
+                    segmentHexRecord.Bytes = segmentHexRecord.Bytes.Concat(hexRecord.Bytes).ToArray();
+                    segmentHexRecord.ByteCount += hexRecord.ByteCount;
+                }
+            }
+
+            // 拆分，每段最大128字节
+            var max128ByteHexRecords = new List<IntelHexRecord>();
+            foreach (var hexRecord in segmentHexRecords)
+            {
+                var page = hexRecord.ByteCount / 128 + (hexRecord.ByteCount % 128 == 0 ? 0 : 1);
+                for (var i = 0; i < page; i++)
+                {
+                    max128ByteHexRecords.Add(new IntelHexRecord
+                    {
+                        Address = hexRecord.Address + i * 128,
+                        ByteCount = i == page - 1 ? hexRecord.ByteCount % 128 : 128,
+                        Bytes = hexRecord.Bytes
+                            .Skip(i * 128)
+                            .Take(i == page - 1 ? hexRecord.ByteCount % 128 : 128)
+                            .ToArray(),
+                    });
+                }
+            }
+
+            return max128ByteHexRecords;
         }
 
         /**
