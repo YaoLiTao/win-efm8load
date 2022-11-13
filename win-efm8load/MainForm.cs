@@ -153,11 +153,11 @@ namespace win_efm8load
             InitializeComponent();
             InitBaudRate();
             ScanCom();
-            Println("##################################################");
-            Println("#                  win-efm8load                  #");
-            Println("#    https://github.com/YaoLiTao/win-efm8load    #");
-            Println("# @Thanks https://github.com/fishpepper/efm8load #");
-            Println("##################################################");
+            Println("##############################################################");
+            Println("#                        win-efm8load                        #");
+            Println("#          https://github.com/YaoLiTao/win-efm8load          #");
+            Println("#       @Thanks https://github.com/fishpepper/efm8load       #");
+            Println("##############################################################");
             Println("");
         }
 
@@ -257,11 +257,11 @@ namespace win_efm8load
                 }
 
                 serial.Open();
-                Println("打开串口[{0}] - 成功", serial.PortName);
+                Println("> 打开串口[{0}] - 成功", serial.PortName);
             }
             catch (Exception)
             {
-                Println("打开串口[{0}] - 失败", serial.PortName);
+                Println("> 打开串口[{0}] - 失败", serial.PortName);
                 throw;
             }
         }
@@ -272,8 +272,7 @@ namespace win_efm8load
         private void CloseSerialPort()
         {
             serial?.Close();
-            Println("关闭串口[{0}]", serial?.PortName);
-            Println("");
+            Println("> 关闭串口[{0}]", serial?.PortName);
         }
 
         /**
@@ -287,7 +286,7 @@ namespace win_efm8load
             dialog.Filter = "*.hex|*.HEX";
             if (dialog.ShowDialog() != DialogResult.OK) return;
             openFileTextBox.Text = dialog.FileName;
-            Println("文件选择成功: {0}", openFileTextBox.Text);
+            Println("> 文件选择成功: {0}", openFileTextBox.Text);
         }
 
         /**
@@ -300,7 +299,7 @@ namespace win_efm8load
             dialog.Filter = "*.hex|*.HEX";
             if (dialog.ShowDialog() != DialogResult.OK) return null;
             infoTextBox.Text += "文件选择成功：" + openFileTextBox.Text + "\r\n";
-            Println("正在读取芯片HEX到: {0}", dialog.FileName);
+            Println("> 正在读取芯片HEX到: {0}", dialog.FileName);
             return dialog.FileName;
         }
 
@@ -324,7 +323,7 @@ namespace win_efm8load
             if (string.IsNullOrEmpty(openFileTextBox.Text))
             {
                 Println("> 未选择程序文件，请先选择需要下载的程序文件");
-                return;
+                throw new NoNullAllowedException();
             }
 
             // read hex file
@@ -812,7 +811,7 @@ namespace win_efm8load
             try
             {
                 Println("");
-                Println("扫描芯片开始...");
+                Println("> 扫描芯片开始...");
                 OpenSerialPort();
                 IdentifyChip();
             }
@@ -831,7 +830,7 @@ namespace win_efm8load
             try
             {
                 Println("");
-                Println("重启芯片开始...");
+                Println("> 重启芯片开始...");
                 OpenSerialPort();
                 SendReset();
             }
@@ -850,10 +849,10 @@ namespace win_efm8load
             try
             {
                 Println("");
-                Println("下载/编程开始...");
+                Println("> 下载/编程开始...");
                 OpenSerialPort();
                 Upload();
-                Println(">>>>>> 下载程序成功 <<<<<<");
+                Println("> 下载程序成功！");
             }
             catch (Exception exception)
             {

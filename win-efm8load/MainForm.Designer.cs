@@ -61,7 +61,7 @@
             this.infoTextBox.Multiline = true;
             this.infoTextBox.Name = "infoTextBox";
             this.infoTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.infoTextBox.Size = new System.Drawing.Size(449, 303);
+            this.infoTextBox.Size = new System.Drawing.Size(519, 303);
             this.infoTextBox.TabIndex = 0;
             this.infoTextBox.WordWrap = false;
             // 
@@ -179,11 +179,14 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Control;
-            this.ClientSize = new System.Drawing.Size(719, 312);
+            this.ClientSize = new System.Drawing.Size(788, 312);
             this.Controls.Add(this.infoTextBox);
             this.Controls.Add(this.panel);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
             this.Location = new System.Drawing.Point(15, 15);
+            this.MaximizeBox = false;
             this.Name = "MainForm";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "EFM8系列芯片串口下载工具";
             this.panel.ResumeLayout(false);
             this.panel.PerformLayout();
