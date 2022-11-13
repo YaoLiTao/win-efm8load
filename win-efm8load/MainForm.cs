@@ -15,6 +15,9 @@
 // Copyright 2020 fishpepper.de
 //
 
+// v0.1
+// 完成基本下载程序功能，尚未完成读取芯片程序功能
+
 using System;
 using System.Collections.Generic;
 using System.Data;
